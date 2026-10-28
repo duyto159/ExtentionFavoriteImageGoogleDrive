@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Ảnh quảng bá cho Chrome Web Store</title>
+<!-- /store/assets-src/promo.html?size=small (440×280) hoặc ?size=marquee (1400×560) -->
+<script src="/store/assets-src/photos.js"></script>
+<style>
+  :root { --ink: #ffffff; --soft: rgba(255, 255, 255, .78); --heart: #ff3d6e; --deep: #2a1638; --mid: #6b2560; --warm: #ff7a6b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    overflow: hidden; color: var(--ink);
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(circle at 85% 20%, rgba(255, 122, 107, .55), transparent 55%),
+      radial-gradient(circle at 10% 90%, rgba(255, 61, 110, .35), transparent 50%),
+      linear-gradient(135deg, var(--deep), var(--mid));
+  }
+  .wrap { position: relative; height: 100%; display: flex; align-items: center; }
+  .icon { flex: none; border-radius: 22%; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+  .name { font-weight: 800; letter-spacing: -.02em; line-height: 1.02; }
+  .sub { color: var(--soft); font-weight: 600; }
+  .tag { color: var(--ink); font-weight: 600; }
+  .tag b { color: var(--heart); }
+
+  /* 440 × 280 */
+  .small .wrap { padding: 0 30px; gap: 22px; }
+  .small .icon { width: 96px; height: 96px; }
+  .small .name { font-size: 34px; }
+  .small .sub { font-size: 17px; margin-top: 4px; }
+  .small .tag { font-size: 15px; margin-top: 16px; opacity: .95; }
+
+  /* 1400 × 560 */
+  .marquee .wrap { padding: 0 90px; gap: 40px; }
+  .marquee .icon { width: 132px; height: 132px; }
+  .marquee .name { font-size: 64px; }
+  .marquee .sub { font-size: 28px; margin-top: 8px; }
+  .marquee .tag { font-size: 24px; margin-top: 26px; }
+  .collage { position: absolute; right: 70px; top: 50%; width: 560px; height: 420px; transform: translateY(-50%); }
+  .shot { position: absolute; width: 270px; padding: 10px 10px 14px; border-radius: 14px; background: #fff; box-shadow: 0 18px 40px rgba(0, 0, 0, .35); }
+  .shot img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; }
+  .shot .h { position: absolute; right: 18px; bottom: 26px; width: 44px; height: 44px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+  .shot .h svg { width: 26px; height: 26px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="icon" src="/extension/icons/icon128.png" alt="">
+    <div>
+      <div class="name">Photo Favorites</div>
+      <div class="sub">for Google Drive</div>
+      <div class="tag">Bấm <b>♥</b> để lưu ảnh yêu thích</div>
+    </div>
+    <div class="collage" id="collage" hidden></div>
+  </div>
+<script>
+  const size = new URLSearchParams(location.search).get('size') || 'small';
+  document.body.className = size;
+  const heart = on => `<svg viewBox="0 0 24 24"><path d="M12 20.6 10.6 19.3C5.6 14.8 2.3 11.8 2.3 8.1 2.3 5.1 4.6 2.8 7.6 2.8c1.7 0 3.3.8 4.4 2 1.1-1.2 2.7-2 4.4-2 3 0 5.3 2.3 5.3 5.3 0 3.7-3.3 6.7-8.3 11.2L12 20.6z" fill="${on ? '#ff3d6e' : 'none'}" stroke="${on ? '#ff3d6e' : '#5f6368'}" stroke-width="2"/></svg>`;
+  if (size === 'marquee') {
+    const collage = document.getElementById('collage');
+    collage.hidden = false;
+    // Thứ tự vẽ: thẻ vẽ sau nằm trên, để tim của cả ba thẻ đều không bị che.
+    [[300, 0, 6, 1, true], [170, 210, -2, 3, false], [0, 40, -7, 6, true]].forEach(([x, y, rot, seed, on]) => {
+      const card = document.createElement('div');
+      card.className = 'shot';
+      card.style.left = `${x}px`;
+      card.style.top = `${y}px`;
+      card.style.transform = `rotate(${rot}deg)`;
+      card.innerHTML = `<img alt="" src="${window.makePhoto(seed, 800, 600)}"><span class="h">${heart(on)}</span>`;
+      collage.append(card);
+    });
+  }
+  Promise.all([...document.images].map(img => (img.complete ? null : new Promise(r => { img.onload = img.onerror = r; }))))
+    .then(() => { window.__ready = true; });
+</script>
+</body>
+</html>

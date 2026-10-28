@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Photo Favorites for Google Drive</title>
+  <link rel="icon" href="icons/icon32.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-heart" viewBox="0 0 24 24">
+      <path d="M12 20.6 10.6 19.3C5.6 14.8 2.3 11.8 2.3 8.1 2.3 5.1 4.6 2.8 7.6 2.8c1.7 0 3.3.8 4.4 2 1.1-1.2 2.7-2 4.4-2 3 0 5.3 2.3 5.3 5.3 0 3.7-3.3 6.7-8.3 11.2L12 20.6z"/>
+    </symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24">
+      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2h8.4A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11z"/>
+    </symbol>
+    <symbol id="i-image" viewBox="0 0 24 24">
+      <path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 12.5V18h14v-3.2l-3.6-3.6-4.2 4.2-2.6-2.6L5 16.5zM8.5 10.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+    </symbol>
+    <symbol id="i-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6h-2V7.4l-7.3 7.3-1.4-1.4L16.6 6H14V4zM5 6h6v2H6v10h10v-5h2v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/>
+    </symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon32.png" alt="" width="28" height="28">
+      <span>Photo Favorites <span class="brand-sub">for Google Drive</span></span>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" hidden>
+      <button type="button" role="tab" class="tab" data-view="drive" aria-selected="true">Ảnh trên Drive</button>
+      <button type="button" role="tab" class="tab" data-view="favorites" aria-selected="false">
+        Đã thích <span class="badge" id="fav-count">0</span>
+      </button>
+    </nav>
+    <div class="account" id="account" hidden>
+      <img id="account-photo" alt="" width="32" height="32" referrerpolicy="no-referrer">
+      <div class="account-text">
+        <strong id="account-name"></strong>
+        <small id="account-email"></small>
+      </div>
+      <button type="button" class="btn ghost small" id="btn-signout">Đăng xuất</button>
+    </div>
+  </header>
+
+  <div class="banner" id="session-banner" role="alert" hidden>
+    <span>Phiên đăng nhập Google đã hết hạn hoặc bị thu hồi.</span>
+    <button type="button" class="btn primary small" id="btn-relogin">Đăng nhập lại</button>
+  </div>
+
+  <main>
+    <section class="screen center" id="screen-loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="muted">Đang khởi động…</p>
+    </section>
+
+    <section class="screen center" id="screen-auth" hidden>
+      <div class="auth-card">
+        <img src="icons/icon128.png" alt="" width="72" height="72">
+        <h1>Lưu ảnh yêu thích từ Google Drive</h1>
+        <p class="muted">Đăng nhập Google để xem ảnh trong Drive, bấm <span class="heart-inline">♥</span> để lưu ảnh bạn thích và xem lại bất cứ lúc nào.</p>
+
+        <div class="alert error" id="config-warning" hidden>
+          <strong>Tiện ích chưa được cấu hình OAuth Client ID.</strong>
+          <p>Mở tệp <code>extension/manifest.json</code>, thay <code>YOUR_CLIENT_ID.apps.googleusercontent.com</code> bằng Client ID bạn tạo trên Google Cloud, lưu tệp rồi bấm nút tải lại tiện ích trong <code>chrome://extensions</code>. Xem bước 2–5 trong tệp <code>HUONG_DAN.md</code>.</p>
+          <p>ID của tiện ích (dùng khi tạo Client ID): <code id="ext-id"></code></p>
+          <p>Không muốn cấu hình? Bấm <b>Dùng không cần đăng nhập</b> bên dưới.</p>
+        </div>
+        <div class="alert error" id="auth-error" hidden></div>
+
+        <button type="button" class="btn primary large" id="btn-signin">Đăng nhập với Google</button>
+
+        <div class="or"><span>hoặc</span></div>
+        <button type="button" class="btn large" id="btn-web-mode">Dùng không cần đăng nhập</button>
+        <p class="muted small web-mode-hint">Không cần cấu hình Google Cloud. Mở <b>drive.google.com</b> như bình thường, bấm nút <span class="heart-inline">♥</span> ở góc phải dưới để lọc ảnh và chọn ảnh yêu thích. Trang này dùng để xem lại và xuất danh sách.</p>
+
+        <ul class="trust">
+          <li>Chỉ xin quyền <b>xem</b> Google Drive — không sửa, xóa hay gắn sao ảnh.</li>
+          <li>Danh sách yêu thích lưu ngay trong trình duyệt này, riêng cho từng tài khoản.</li>
+          <li>Không gửi ảnh hay thông tin tài khoản tới máy chủ nào khác ngoài Google.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="view" id="view-drive" hidden>
+      <form class="folder-bar" id="folder-form" autocomplete="off">
+        <label class="sr-only" for="folder-input">Đường dẫn thư mục Google Drive</label>
+        <input type="text" id="folder-input" class="input" placeholder="Dán đường dẫn thư mục Google Drive, ví dụ: https://drive.google.com/drive/folders/…">
+        <button type="submit" class="btn primary">Mở thư mục</button>
+        <button type="button" class="btn" id="btn-all-images">Tất cả ảnh</button>
+      </form>
+      <div class="alert error" id="folder-error" hidden></div>
+
+      <div class="chips" id="recent-folders" hidden></div>
+
+      <div class="location">
+        <div class="location-main">
+          <button type="button" class="btn ghost small" id="btn-back" hidden>← Quay lại</button>
+          <div>
+            <h2 id="location-title">Tất cả ảnh bạn có quyền xem</h2>
+            <p class="muted small" id="location-info"></p>
+          </div>
+          <a class="link" id="location-link" target="_blank" rel="noopener" hidden>
+            Mở trên Google Drive <svg class="icon-sm"><use href="#i-external"/></svg>
+          </a>
+        </div>
+        <label class="sr-only" for="drive-search">Tìm ảnh theo tên</label>
+        <input type="search" id="drive-search" class="input search" placeholder="Tìm ảnh theo tên…">
+      </div>
+
+      <div class="chips" id="subfolders" hidden></div>
+
+      <div id="drive-status"></div>
+      <div class="grid" id="drive-grid"></div>
+      <div class="more">
+        <button type="button" class="btn" id="btn-load-more" hidden>Tải thêm ảnh</button>
+      </div>
+      <div class="sentinel" id="drive-sentinel"></div>
+    </section>
+
+    <section class="view" id="view-favorites" hidden>
+      <div class="alert info" id="web-help" hidden>
+        <div>
+          <strong>Chọn ảnh ngay trên Google Drive.</strong>
+          Mở thư mục có ảnh, rê chuột vào ảnh rồi bấm <span class="heart-inline">♥</span>, hoặc mở ảnh lớn và nhấn phím L. Trang này để xem lại, nhập và xuất danh sách.
+        </div>
+        <div class="web-help-actions">
+          <label id="web-account-wrap" hidden>Tài khoản:
+            <select id="web-account" class="input select"></select>
+          </label>
+          <a class="btn primary small" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener">Mở Google Drive</a>
+        </div>
+      </div>
+      <div class="fav-toolbar">
+        <div>
+          <h2>Ảnh đã thích</h2>
+          <p class="muted small" id="fav-summary"></p>
+        </div>
+        <label class="sr-only" for="fav-search">Tìm trong ảnh đã thích</label>
+        <input type="search" id="fav-search" class="input search" placeholder="Tìm trong ảnh đã thích…">
+        <div class="export">
+          <button type="button" class="btn small" id="btn-copy">Sao chép danh sách</button>
+          <button type="button" class="btn small" id="btn-csv">Tải tệp CSV</button>
+          <button type="button" class="btn small" id="btn-txt">Tải tệp TXT</button>
+          <button type="button" class="btn small" id="btn-import" title="Nhập lại tệp CSV hoặc TXT đã xuất từ tiện ích">Nhập danh sách</button>
+          <input type="file" id="import-file" accept=".csv,.txt,text/csv,text/plain" hidden>
+        </div>
+      </div>
+      <div class="alert warn" id="fav-missing" hidden>
+        <span id="fav-missing-text"></span>
+        <button type="button" class="btn small" id="btn-clean-missing">Bỏ các ảnh này khỏi danh sách</button>
+      </div>
+
+      <div id="fav-status"></div>
+      <div class="grid" id="fav-grid"></div>
+      <div class="more">
+        <button type="button" class="btn" id="btn-fav-more" hidden>Hiện thêm</button>
+      </div>
+      <div class="sentinel" id="fav-sentinel"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Photo Favorites for Google Drive là tiện ích độc lập, không liên kết với Google. Google Drive là nhãn hiệu của Google LLC.
+  </footer>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lb-name" hidden>
+    <div class="lb-backdrop" data-close></div>
+    <button type="button" class="lb-close" data-close aria-label="Đóng">×</button>
+    <button type="button" class="lb-nav prev" id="lb-prev" aria-label="Ảnh trước">‹</button>
+    <button type="button" class="lb-nav next" id="lb-next" aria-label="Ảnh sau">›</button>
+    <div class="lb-stage">
+      <img id="lb-img" alt="">
+      <div class="spinner" id="lb-spinner" aria-hidden="true"></div>
+      <div class="lb-msg" id="lb-msg" hidden></div>
+    </div>
+    <div class="lb-info">
+      <div class="lb-text">
+        <h3 id="lb-name"></h3>
+        <small id="lb-meta"></small>
+      </div>
+      <div class="lb-actions">
+        <button type="button" class="heart big" id="lb-heart" aria-pressed="false" aria-label="Thích ảnh">
+          <svg><use href="#i-heart"/></svg>
+        </button>
+        <a class="btn primary" id="lb-open" target="_blank" rel="noopener">
+          Mở ảnh gốc trên Google Drive <svg class="icon-sm"><use href="#i-external"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <template id="card-template">
+    <article class="card">
+      <button type="button" class="thumb" aria-label="Xem ảnh lớn">
+        <img alt="" decoding="async" hidden>
+        <span class="thumb-fallback" hidden>
+          <svg><use href="#i-image"/></svg>
+          <span class="thumb-fallback-text">Không có ảnh xem trước</span>
+        </span>
+      </button>
+      <div class="card-meta">
+        <span class="card-name"></span>
+        <button type="button" class="heart" aria-pressed="false" aria-label="Thích ảnh">
+          <svg><use href="#i-heart"/></svg>
+        </button>
+      </div>
+      <div class="card-warning" hidden>
+        <span class="card-warning-text"></span>
+        <button type="button" class="link-btn" data-action="remove">Bỏ khỏi danh sách</button>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

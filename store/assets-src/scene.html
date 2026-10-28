@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Cảnh chụp màn hình cho Chrome Web Store</title>
+<!-- Trang mô phỏng một thư mục ảnh trên Google Drive (không dùng logo Google) để chụp ảnh giới thiệu.
+     Giao diện tiện ích (nút ♥, bảng ảnh) là mã thật trong extension/, chạy với chrome.* giả lập.
+     Mở qua máy chủ thử nghiệm: /store/assets-src/scene.html?shot=grid|viewer|panel|favorites -->
+<script src="/tests/mock-chrome.js"></script>
+<script src="/store/assets-src/photos.js"></script>
+<style>
+  :root { --page: #f8fafd; --surface: #ffffff; --card: #f0f4f9; --line: #c4c7c5; --text: #1f1f1f; --muted: #5f6368; --nav-on: #c2e7ff; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 14px/1.4 "Segoe UI", Roboto, Arial, sans-serif; overflow: hidden; }
+  .top { height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 20px; }
+  .brand { width: 224px; display: flex; align-items: center; gap: 12px; font-size: 21px; color: #444746; }
+  .brand-mark { width: 34px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #9db8ff, #5b84f1); }
+  .search { flex: 1; max-width: 720px; height: 48px; border-radius: 24px; background: #e9eef6; display: flex; align-items: center; gap: 14px; padding: 0 20px; color: var(--muted); font-size: 16px; }
+  .search i { width: 18px; height: 18px; border: 2px solid var(--muted); border-radius: 50%; position: relative; }
+  .avatar { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; background: #7b5cd6; color: #fff; display: grid; place-items: center; font-weight: 600; }
+  .layout { display: flex; height: calc(100% - 64px); }
+  nav { width: 256px; padding: 4px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .new { width: 112px; height: 56px; border-radius: 16px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); display: flex; align-items: center; gap: 12px; padding: 0 20px; margin: 4px 0 16px; font-weight: 600; font-size: 15px; }
+  .new b { font-size: 26px; font-weight: 400; line-height: 1; }
+  nav span { height: 34px; border-radius: 17px; padding: 0 18px; display: flex; align-items: center; gap: 14px; }
+  nav span::before { content: ""; width: 18px; height: 18px; border-radius: 4px; border: 2px solid #444746; opacity: .7; }
+  nav span.on { background: var(--nav-on); font-weight: 600; }
+  main#scroller { flex: 1; background: var(--surface); border-radius: 16px 16px 0 0; margin-right: 16px; padding: 18px 24px; overflow: auto; }
+  .crumb { font-size: 22px; margin: 2px 0 14px; display: flex; gap: 10px; align-items: center; }
+  .crumb small { color: var(--muted); font-size: 22px; }
+  .chips { display: flex; gap: 8px; margin-bottom: 18px; }
+  .chips span { border: 1px solid var(--line); border-radius: 8px; padding: 5px 14px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+  .item { background: var(--card); border-radius: 12px; padding: 8px; }
+  .item .hd { display: flex; align-items: center; gap: 10px; padding: 4px 4px 10px; font-weight: 500; font-size: 13.5px; }
+  .item .ico { width: 16px; height: 16px; border-radius: 3px; background: #e2564c; flex: none; }
+  .item .nm { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .item .more { color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+  .item img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; }
+
+  .viewer { position: fixed; inset: 0; z-index: 50; background: rgba(32, 33, 36, .94); }
+  .vbar { position: absolute; top: 0; left: 0; right: 0; height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 18px; color: #fff; background: #1b1c1f; }
+  .vbar .x { font-size: 22px; opacity: .9; }
+  .vbar .vico { width: 22px; height: 22px; border-radius: 4px; background: #e2564c; }
+  .vname { font-size: 17px; }
+  .vmenu { font-size: 12.5px; opacity: .8; display: flex; gap: 14px; }
+  .vimg { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); height: 74vh; border-radius: 2px; box-shadow: 0 12px 40px rgba(0, 0, 0, .5); }
+  .varrow { position: absolute; top: 50%; width: 44px; height: 44px; margin-top: -22px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .5); color: #fff; display: grid; place-items: center; font-size: 26px; }
+  .varrow.l { left: 18px; } .varrow.r { right: 18px; }
+
+  .callout { position: fixed; z-index: 2147483647; background: #1b1e2b; color: #fff; padding: 12px 18px; border-radius: 14px; font-size: 17px; font-weight: 600; box-shadow: 0 12px 32px rgba(0, 0, 0, .35); white-space: nowrap; }
+  .callout small { display: block; font-size: 13px; font-weight: 400; opacity: .8; margin-top: 2px; }
+  .callout::after { content: ""; position: absolute; width: 14px; height: 14px; background: inherit; transform: rotate(45deg); }
+  .callout.below::after { top: -7px; left: var(--tip, 24px); }
+  .callout.above::after { bottom: -7px; left: var(--tip, 24px); }
+  .callout.left::after { right: -7px; top: var(--tip, 22px); }
+  .cursor { position: fixed; z-index: 2147483647; width: 22px; height: 30px; pointer-events: none; }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="brand-mark"></span>Drive</div>
+    <div class="search"><i></i>Tìm trong Drive</div>
+    <div class="avatar" aria-label="Tài khoản Google: Minh Anh (ban@example.com)">M</div>
+  </header>
+  <div class="layout">
+    <nav>
+      <div class="new"><b>+</b> Mới</div>
+      <span>Trang chủ</span>
+      <span class="on">Drive của tôi</span>
+      <span>Được chia sẻ với tôi</span>
+      <span>Gần đây</span>
+      <span>Có gắn dấu sao</span>
+      <span>Thùng rác</span>
+    </nav>
+    <main id="scroller">
+      <div class="crumb"><small>Drive của tôi ›</small> Du lịch Đà Lạt 2026</div>
+      <div class="chips"><span>Loại ▾</span><span>Người dùng ▾</span><span>Sửa đổi ▾</span></div>
+      <div class="grid" id="grid"></div>
+    </main>
+  </div>
+
+<script>
+  const SHOT = new URLSearchParams(location.search).get('shot') || 'grid';
+  const FOLDER_ID = '1SceneFolderAbCdEfGhIjKl';
+  const TOTAL = 24;
+  const fileId = i => `1Scene${String(i).padStart(4, '0')}AbCdEfGhIjKl`;
+  const fileName = i => `IMG_${2040 + i}.JPG`;
+  const photo = i => window.makePhoto(i, 800, 600);
+  const LIKED = { grid: [1, 4, 6, 9], viewer: [1, 4, 7], panel: [1, 4, 6, 9, 12], favorites: [1, 4, 6, 9, 12, 15, 18] }[SHOT] || [];
+
+  // Lưu trữ giả lập: danh sách đã thích của tài khoản minh họa.
+  Object.keys(localStorage).forEach(k => localStorage.removeItem(k));
+  const favs = {};
+  LIKED.forEach((i, n) => {
+    favs[fileId(i)] = { id: fileId(i), name: fileName(i), link: `https://drive.google.com/file/d/${fileId(i)}/view`, mimeType: 'image/jpeg', addedAt: Date.now() - n * 60000 };
+  });
+  localStorage.setItem('mock:storage', JSON.stringify({
+    'favorites:web:ban@example.com': favs,
+    webAccounts: [{ id: 'web:ban@example.com', label: 'ban@example.com', lastUsed: Date.now() }],
+    webSettings: { inlineHearts: true, viewerHeart: true },
+  }));
+
+  // Lưới ảnh của thư mục (15 ảnh đầu hiển thị trên trang, cả thư mục có 24 ảnh).
+  const grid = document.getElementById('grid');
+  for (let i = 1; i <= 15; i++) {
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.dataset.id = fileId(i);
+    item.innerHTML = `<div class="hd"><span class="ico"></span><span class="nm">${fileName(i)}</span><span class="more">⋮</span></div><img alt="" src="${photo(i)}">`;
+    grid.append(item);
+  }
+
+  // Trang nhúng thư mục giả lập (tiện ích đọc trang này để lấy toàn bộ ảnh trong thư mục).
+  const baseFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+    if (url.pathname === '/embeddedfolderview') {
+      const entries = Array.from({ length: TOTAL }, (_, k) => {
+        const i = k + 1;
+        return `<div class="flip-entry" id="entry-${fileId(i)}"><a href="https://drive.google.com/file/d/${fileId(i)}/view"><div class="flip-entry-thumb"><img src="${photo(i)}"></div>`
+          + `<img src="https://drive-thirdparty.googleusercontent.com/16/type/image/jpeg"><div class="flip-entry-title">${fileName(i)}</div></a></div>`;
+      }).join('');
+      return new Response(`<html><head><title>Du lịch Đà Lạt 2026</title></head><body>${entries}</body></html>`, { headers: { 'Content-Type': 'text/html' } });
+    }
+    return baseFetch(input, init);
+  };
+
+  history.replaceState(null, '', `/drive/folders/${FOLDER_ID}`);
+  document.title = 'Du lịch Đà Lạt 2026 - Google Drive';
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  function callout(html, { x, y, side = 'above', tip }) {
+    const el = document.createElement('div');
+    el.className = `callout ${side}`;
+    el.innerHTML = html;
+    if (tip) el.style.setProperty('--tip', `${tip}px`);
+    document.body.append(el);
+    const r = el.getBoundingClientRect();
+    if (side === 'above') { el.style.left = `${x - (tip || 24) - 7}px`; el.style.top = `${y - r.height - 12}px`; }
+    if (side === 'below') { el.style.left = `${x - (tip || 24) - 7}px`; el.style.top = `${y + 12}px`; }
+    if (side === 'left') { el.style.left = `${x - r.width - 14}px`; el.style.top = `${y - (tip || 22) - 7}px`; }
+    return el;
+  }
+
+  function cursorAt(x, y) {
+    const c = document.createElement('div');
+    c.className = 'cursor';
+    c.innerHTML = '<svg viewBox="0 0 22 30" width="22" height="30"><path d="M1 1 L1 23 L7 17.5 L11.5 28 L15 26.5 L10.5 16 L18.5 16 Z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    c.style.left = `${x}px`;
+    c.style.top = `${y}px`;
+    document.body.append(c);
+  }
+
+  // Ảnh tải chậm (loading=lazy) ngoài màn hình không bao giờ tải: chờ tối đa 2 giây.
+  async function imagesLoaded(root) {
+    const imgs = [...root.querySelectorAll('img')].filter(img => img.getAttribute('src'));
+    const all = Promise.all(imgs.map(img => (img.complete ? null : new Promise(r => img.addEventListener('load', r, { once: true })))));
+    await Promise.race([all, sleep(2000)]);
+  }
+
+  async function setup() {
+    const mod = await import('/extension/js/drive-panel.js');
+    await mod.mountPanel();
+    const P = mod._state;
+    const shadow = document.getElementById('dpf-root').shadowRoot;
+    await imagesLoaded(document);
+
+    if (SHOT === 'grid') {
+      const tile = grid.children[1];
+      tile.querySelector('img').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      await frame();
+      const heart = P.tiles.get(tile).heart.getBoundingClientRect();
+      cursorAt(heart.left + 14, heart.top + 12);
+      callout('Rê chuột vào ảnh, bấm ♥<small>Ảnh đã thích luôn hiện tim đỏ</small>', { x: heart.left + heart.width / 2, y: heart.bottom + 6, side: 'below', tip: 30 });
+    }
+
+    if (SHOT === 'viewer') {
+      const v = document.createElement('div');
+      v.className = 'viewer';
+      v.innerHTML = `<div class="vbar"><span class="x">✕</span><span class="vico"></span><div><div class="vname">${fileName(4)}</div><div class="vmenu"><span>Tệp</span><span>Xem</span><span>Trợ giúp</span></div></div></div>`
+        + `<img class="vimg" alt="" src="${window.makePhoto(4, 1200, 900)}"><div class="varrow l">‹</div><div class="varrow r">›</div>`;
+      document.body.append(v);
+      await imagesLoaded(v);
+      for (let i = 0; i < 20 && shadow.querySelector('.viewer-bar').hidden; i++) await sleep(100);
+      const btn = shadow.querySelector('.viewer-heart').getBoundingClientRect();
+      callout('Đang xem ảnh lớn? Bấm ♥ hoặc nhấn phím L<small>Lướt ←/→ sang ảnh khác rồi chọn tiếp</small>', { x: btn.left + btn.width / 2, y: btn.top - 4, side: 'above', tip: 150 });
+    }
+
+    if (SHOT === 'panel' || SHOT === 'favorites') {
+      shadow.querySelector('.fab').click();
+      for (let i = 0; i < 30 && !/\(24\)/.test(shadow.querySelector('.tab').textContent); i++) await sleep(100);
+      if (SHOT === 'favorites') shadow.querySelectorAll('.tab')[1].click();
+      await frame();
+      await imagesLoaded(shadow);
+      const panel = shadow.querySelector('.panel').getBoundingClientRect();
+      if (SHOT === 'panel') {
+        callout('Lọc riêng ảnh trong thư mục<small>Tìm theo tên, xem ảnh lớn, bấm ♥</small>', { x: panel.left - 4, y: 250, side: 'left', tip: 26 });
+      } else {
+        const actions = shadow.querySelector('.actions').getBoundingClientRect();
+        callout('Xem lại, xuất CSV / TXT để chia sẻ<small>Nhập lại danh sách khi cần</small>', { x: panel.left - 4, y: actions.top + actions.height / 2, side: 'left', tip: 26 });
+      }
+    }
+
+    await sleep(400);
+    window.__ready = true;
+  }
+
+  setup().catch(err => {
+    document.body.insertAdjacentHTML('beforeend', `<pre style="position:fixed;top:0;left:0;z-index:2147483647;background:#fff;color:red">${err.stack}</pre>`);
+    window.__ready = true;
+  });
+</script>
+</body>
+</html>

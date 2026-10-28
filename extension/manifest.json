@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Photo Favorites for Google Drive",
+  "short_name": "Photo Favorites",
+  "version": "1.0.0",
+  "description": "Bấm ♥ để lưu ảnh yêu thích ngay trên Google Drive, xem lại và xuất danh sách. Không liên kết với Google.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlP+T4kbEypwYB4DwgUHtckrI9Q5xWmYx0jCoG4Y/6GTSwFsVDpeHDjmTwrq+l8HjBhZLsDnIZvM2GRTKRZIVRj8WRn6tbqLB/KfVzCWdcn3czoK0hK+90AAG1CSIz4/Kg6B0xld0nofs8O1PCrOF7K/i/zUszln7ofDof04UUyw97+8C8Ty9FaVIiTdcL921/krUbzHfQ9CWOKz7jqRRuM5bJaJpoZnVvEGLQvdiY2s1aP8ROG+re4vVQAmcBVx6kuhtFgGJzsbzh8RaQprB0eIb7M619QMApd+91ZglzaxVb2iZgTNC9ZmjqOlrAvngHpUAXvSDKHQ6Ub/8u6a4VwIDAQAB",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Photo Favorites for Google Drive",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["identity", "storage"],
+  "host_permissions": [
+    "https://www.googleapis.com/*",
+    "https://*.googleusercontent.com/*",
+    "https://oauth2.googleapis.com/*",
+    "https://drive.google.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://drive.google.com/*"],
+      "js": ["content/loader.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["js/drive-panel.js", "js/store.js", "js/utils.js", "css/panel.css"],
+      "matches": ["https://drive.google.com/*"]
+    }
+  ],
+  "oauth2": {
+    "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/drive.readonly"]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "photo-favorites-for-google-drive",
+  "private": true,
+  "type": "module",
+  "description": "Mã kiểm thử và đóng gói cho tiện ích Chrome Photo Favorites for Google Drive (thư mục extension/). Không cần cài đặt gì để dùng tiện ích.",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "harness": "node tests/serve-harness.js",
+    "build:store": "node scripts/build-store.js",
+    "assets:store": "node scripts/render-store-assets.js"
+  }
+}
